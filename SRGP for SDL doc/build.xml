@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE project>
+
+<!-- Beispiel build.xml -->
+
+<!-- Aufrufe mit
+		ant : erstellt alle Formate
+		ant html: erstellt html nur aus einer Quelldatei
+		ant multi: erstellt html aus mit xinclude zusammengefügten Dateien
+		
+	Voraussetzungen:
+		Folgende Dateien müssen im Ant classpath verfügbar sein 
+		(z.B. im lib-Verzeichnis von Ant)
+	
+		xinclude-task-0.2.jar 	
+		xincluder.jar
+		
+	 -->
+
+<project name="Example" default="all" basedir=".">
+
+	<property name="source" value="srgp"/>
+	<property name="outputdir" value="out"/>
+	
+	<property name="xsldir" value="xsl"/>
+	
+	<!-- Dokument aus einzelner Quelldatei erstellen -->
+	<target name="html">
+		<mkdir dir="${outputdir}" />
+		<xslt
+			in="src/${source}.xml"
+			out="${outputdir}/${source}.html"
+			style="${xsldir}/html/docbook.xsl" />
+	</target>
+
+	<target name="pdf">
+		<mkdir dir="${outputdir}" />
+		<xslt
+			in="src/${source}.xml"
+			out="${outputdir}/${source}.pdf"
+			style="${xsldir}/fo/docbook.xsl" />
+	</target>
+ 
+	<!-- Alles transformieren -->
+	<target name="all" depends="html"/>
+
+</project>

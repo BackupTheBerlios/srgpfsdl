@@ -1,0 +1,172 @@
+<html><head><META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>SRGP for ANSI-C (v1.0)</title><meta name="generator" content="DocBook XSL Stylesheets V1.65.1"><meta name="description" content="
+				The Simple Raster Graphics Package is composed of a
+				library of functions, and a header file (&quot;srgp.h&quot;) that
+				defines custom data types and constants, and which
+				prototypes all SRGP routines. This paper is a complete
+				but extremely terse description of the ANSI-C SRGP
+				binding -- this is not a tutorial. If you are new to
+				SRGP, you must read Chapter 2 of Computer Graphics --
+				Principles and Practice (Foley, van Dam, Feiner, and
+				Hughes, Addison-Wesley, 1990).
+			"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="book" lang="en"><div class="titlepage"><div><div><h1 class="title"><a name="N65537"></a>SRGP for ANSI-C (v1.0)</h1></div><div><div class="author"><h3 class="author"><span class="firstname">David</span> <span class="othername">Frederick</span> <span class="surname">Sklar</span></h3></div></div><div><div class="author"><h3 class="author"><span class="firstname">Dirk</span> <span class="surname">H&ouml;pfner</span></h3><tt class="email">&lt;<a href="mailto:hoeppie at users.berlios.de">hoeppie at users.berlios.de</a>&gt;</tt></div></div><div><div class="abstract"><p class="title"><b>Abstract</b></p><p>
+				The Simple Raster Graphics Package is composed of a
+				library of functions, and a header file ("srgp.h") that
+				defines custom data types and constants, and which
+				prototypes all SRGP routines. This paper is a complete
+				but extremely terse description of the ANSI-C SRGP
+				binding -- this is not a tutorial. If you are new to
+				SRGP, you must read Chapter 2 of Computer Graphics --
+				Principles and Practice (Foley, van Dam, Feiner, and
+				Hughes, Addison-Wesley, 1990).
+			</p></div></div></div><div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#N65560">1. Contrast with Textbook Specification</a></span></dt><dt><span class="chapter"><a href="#N65577">2. States of the System</a></span></dt><dt><span class="chapter"><a href="#N65644">3. Einleitung</a></span></dt><dt><span class="appendix"><a href="#N65654">A. Anhang</a></span></dt></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="N65560"></a>Chapter&nbsp;1.&nbsp;Contrast with Textbook Specification</h2></div></div><div></div></div><p>
+			Chapter 3 of the textbook is an academic study of the issues
+			involved in implementing any raster graphics package; it is
+			not a description of the actual internal workings of any
+			particular SRGP implementation. SRGP has been implemented on
+			several major types of hardware platforms, and in all cases,
+			low-level graphics utilities (QuickDraw on the Mac, X11 on
+			workstations, and MetaGraphics on the PC) were used. Because
+			the authors of SRGP were not involved in the implementation
+			of the software actually drawing the primitives, there is no
+			pixel-level compatibility between SRGP applications running
+			on different platforms. Fortunately, the inconsistency in
+			appearance will be typically noticeable only for extreme
+			values for attributes (very thick primitives, rare
+			combinations of write mode and pen/fill style, etc.).
+		</p><p>
+			The textbook spec did not discuss how SRGP would work in a
+			windowing environment. This document describes how the
+			windowing environment affects SRGP, and introduces a few new
+			routines addressing window-specific problems.
+		</p><p>
+			The textbook's description of locator echo included "no
+			echo" as an option available to the application. However, it
+			was determined that an invisible cursor is frustrating to
+			users of a multi-window system. The "no echo" option is thus
+			honored only by the PC version of SRGP.
+		</p><p>
+			The textbook (page 33) claims that the colors black and
+			white are 1 and 0, respectively, at all times. This is true
+			for all devices having color tables, but it is sometimes
+			false for monochrome systems that are designed for
+			white-on-black display.
+		</p><p>
+			The textbook did not describe methods for loading bitmap and
+			pixmap patterns into the respective pattern tables, for
+			loading fonts into the font table, and for loading entries
+			in the color table. See sections 3.1 and 3.3 of this
+			document.
+		</p><p>
+			There are now "deluxe" versions of the measure records for
+			each input device. These should be used when timestamps and
+			modifer-key chords are needed.
+		</p><p>
+			The textbook specifies the size of the screen canvas cannot
+			be changed by the application. That is no longer the case.
+		</p></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="N65577"></a>Chapter&nbsp;2.&nbsp;States of the System</h2></div></div><div></div></div><p>
+			SRGP must be enabled before use, and disabled after use.
+		</p><pre class="programlisting">
+			void SRGP_begin (char *name, int width, int height, int
+			planes, boolean enable_trace);
+		</pre><p>
+			The window which will represent canvas #0 (the SRGP
+			screen-canvas) is created; its initial size is determined by
+			the values of the second and third parameters. The first
+			parameter specifies a name for the application. The fifth
+			parameter specifies the initial status of the tracing
+			feature, which is described later in this section.
+		</p><p>
+			The fourth parameter is meaningful only on a display
+			supporting color. It specifies how many planes of the color
+			table should be reserved for SRGP's use; i.e., it places an
+			upper bound on the number of colors that may be displayed
+			simultaneously in the SRGP window. (The upper bound is 2p
+			colors, where p is the number of planes.) The fourth
+			parameter is ignored when the program is run on a bilevel
+			display.
+		</p><p>
+			If the program is being run on a color display, and you send
+			the special value "0" as the fourth parameter, SRGP will
+			take over the entire color table, giving your application
+			color support as rich as the hardware can offer. (After
+			initializing SRGP, you can inquire the "canvas depth" to
+			determine how many planes are available.) The disadvantage:
+			it will be impossible for the user to simultaneously see the
+			SRGP window's proper coloring and the other clients'
+			windows' proper coloring. Thus, you should request "0"
+			planes only when your application truly needs full control
+			of the color table
+		</p><p>
+			If you request more planes than available, all available
+			planes are allocated, just as if you requested "0" planes.
+			Inquiry is thus your only way of determining exactly how
+			many planes are available.
+		</p><pre class="programlisting">
+			void SRGP_tracing (boolean);
+		</pre><p>
+			When tracing is enabled, a message is sent to a logging file
+			('SRGPlogfile' in the current directory) each time the
+			application calls an SRGP function; the message includes
+			echoing of key parameters. IMPORTANT: Calls to some of the
+			input functions are NOT traced; see section 5 for details.
+			See section 7 for more information on execution with
+			tracing.
+		</p><p>
+			The initial status of tracing is set when the application
+			calls SRGP begin, but it may be changed at any time via a
+			call to SRGP tracing.
+		</p><pre class="programlisting">
+			void SRGP_allowResize (boolean);
+		</pre><p>
+			By default, the screen-canvas window cannot be resized by
+			the user. It is advisable that applications live with this
+			restriction. The rare application that needs to allow
+			resizing can use this routine. It is important to note that
+			various artifacts occur when the user actually does take
+			advantage of this freedom and perform a resize:
+		</p><div class="orderedlist"><ol type="1"><li><p>
+					The window is cleared to color 0; any information
+					that was on the screen just before the resize is
+					lost.
+				</p></li><li><p>
+					The clip rectangle attribute is not changed
+					automatically; the application must be responsible
+					for changing it ifnecessary.
+				</p></li></ol></div><p>
+			Obviously, an application that allows resizing must be
+			informed whenever a resize occurs, to cope with the
+			aforementioned problems and other application-specific ones.
+			SRGP provides a callback utility, which allows an
+			application to provide a function to be called whenever a
+			resize has occurred:
+		</p><pre class="programlisting">
+			typedef int (*funcptr)(); void SRGP_registerResizeCallback
+			(funcptr);
+		</pre><p>
+			The application-provided callback function referred to by
+			the function-pointer parameter will be called whenever a
+			resize has occurred. The callback function will receive two
+			integers: the new width and the new height.
+		</p><pre class="programlisting">
+			void SRGP_changeScreenCanvasSize (int newwidth, int
+			newheight);
+		</pre><p>
+			This routine allows the application to modify the size of
+			the screen canvas. As a side-effect, the resize-callback
+			function (if any) is called, just as if the user had
+			requested the resize.
+		</p><pre class="programlisting">
+			void SRGP_enableSynchronous (void);
+		</pre><p>
+			Allows you to enable X's synchronous mode, a useful mode for
+			debugging. The mode is discussed rigorously in section 3,
+			and again in section 7.
+		</p><pre class="programlisting">void SRGP_end (void);</pre><p>
+			The screen-canvas window is deleted, and the logging file is
+			closed.
+		</p></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="N65644"></a>Chapter&nbsp;3.&nbsp;Einleitung</h2></div></div><div></div></div><p>Hier ist das erste Textkapitel des Textes.</p><p>
+			Um mit DocBook arbeiten zu k&ouml;nnen, ben&ouml;tigt man als
+			allererstes die DTD, die unter
+			<a href="http://www.docbook.org/" target="_top">http://www.docbook.org/</a>
+			zu finden ist.
+		</p></div><div class="appendix" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="N65654"></a>Appendix&nbsp;A.&nbsp;Anhang</h2></div></div><div></div></div></div></div></body></html>

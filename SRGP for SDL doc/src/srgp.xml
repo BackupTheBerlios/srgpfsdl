@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.2//EN" "../dtd/docbookx.dtd">
+
+<book lang="en">
+	<bookinfo>
+		<title>SRGP for ANSI-C (v1.0)</title>
+		<author>
+			<firstname>David</firstname>
+			<othername>Frederick</othername>
+			<surname>Sklar</surname>
+		</author>
+		<author>
+			<firstname>Dirk</firstname>
+			<surname>H&ouml;pfner</surname>
+			<email>hoeppie at users.berlios.de</email>
+		</author>
+		<abstract>
+			<para>
+				The Simple Raster Graphics Package is composed of a
+				library of functions, and a header file ("srgp.h") that
+				defines custom data types and constants, and which
+				prototypes all SRGP routines. This paper is a complete
+				but extremely terse description of the ANSI-C SRGP
+				binding -- this is not a tutorial. If you are new to
+				SRGP, you must read Chapter 2 of Computer Graphics --
+				Principles and Practice (Foley, van Dam, Feiner, and
+				Hughes, Addison-Wesley, 1990).
+			</para>
+		</abstract>
+	</bookinfo>
+	<chapter>
+		<title>Contrast with Textbook Specification</title>
+		<para>
+			Chapter 3 of the textbook is an academic study of the issues
+			involved in implementing any raster graphics package; it is
+			not a description of the actual internal workings of any
+			particular SRGP implementation. SRGP has been implemented on
+			several major types of hardware platforms, and in all cases,
+			low-level graphics utilities (QuickDraw on the Mac, X11 on
+			workstations, and MetaGraphics on the PC) were used. Because
+			the authors of SRGP were not involved in the implementation
+			of the software actually drawing the primitives, there is no
+			pixel-level compatibility between SRGP applications running
+			on different platforms. Fortunately, the inconsistency in
+			appearance will be typically noticeable only for extreme
+			values for attributes (very thick primitives, rare
+			combinations of write mode and pen/fill style, etc.).
+		</para>
+		<para>
+			The textbook spec did not discuss how SRGP would work in a
+			windowing environment. This document describes how the
+			windowing environment affects SRGP, and introduces a few new
+			routines addressing window-specific problems.
+		</para>
+		<para>
+			The textbook's description of locator echo included "no
+			echo" as an option available to the application. However, it
+			was determined that an invisible cursor is frustrating to
+			users of a multi-window system. The "no echo" option is thus
+			honored only by the PC version of SRGP.
+		</para>
+		<para>
+			The textbook (page 33) claims that the colors black and
+			white are 1 and 0, respectively, at all times. This is true
+			for all devices having color tables, but it is sometimes
+			false for monochrome systems that are designed for
+			white-on-black display.
+		</para>
+		<para>
+			The textbook did not describe methods for loading bitmap and
+			pixmap patterns into the respective pattern tables, for
+			loading fonts into the font table, and for loading entries
+			in the color table. See sections 3.1 and 3.3 of this
+			document.
+		</para>
+		<para>
+			There are now "deluxe" versions of the measure records for
+			each input device. These should be used when timestamps and
+			modifer-key chords are needed.
+		</para>
+		<para>
+			The textbook specifies the size of the screen canvas cannot
+			be changed by the application. That is no longer the case.
+		</para>
+	</chapter>
+	<chapter>
+		<title>States of the System</title>
+		<para>
+			SRGP must be enabled before use, and disabled after use.
+		</para>
+		<programlisting role="C">
+			void SRGP_begin (char *name, int width, int height, int
+			planes, boolean enable_trace);
+		</programlisting>
+		<para>
+			The window which will represent canvas #0 (the SRGP
+			screen-canvas) is created; its initial size is determined by
+			the values of the second and third parameters. The first
+			parameter specifies a name for the application. The fifth
+			parameter specifies the initial status of the tracing
+			feature, which is described later in this section.
+		</para>
+		<para>
+			The fourth parameter is meaningful only on a display
+			supporting color. It specifies how many planes of the color
+			table should be reserved for SRGP's use; i.e., it places an
+			upper bound on the number of colors that may be displayed
+			simultaneously in the SRGP window. (The upper bound is 2p
+			colors, where p is the number of planes.) The fourth
+			parameter is ignored when the program is run on a bilevel
+			display.
+		</para>
+		<para>
+			If the program is being run on a color display, and you send
+			the special value "0" as the fourth parameter, SRGP will
+			take over the entire color table, giving your application
+			color support as rich as the hardware can offer. (After
+			initializing SRGP, you can inquire the "canvas depth" to
+			determine how many planes are available.) The disadvantage:
+			it will be impossible for the user to simultaneously see the
+			SRGP window's proper coloring and the other clients'
+			windows' proper coloring. Thus, you should request "0"
+			planes only when your application truly needs full control
+			of the color table
+		</para>
+		<para>
+			If you request more planes than available, all available
+			planes are allocated, just as if you requested "0" planes.
+			Inquiry is thus your only way of determining exactly how
+			many planes are available.
+		</para>
+		<programlisting role="C">
+			void SRGP_tracing (boolean);
+		</programlisting>
+		<para>
+			When tracing is enabled, a message is sent to a logging file
+			('SRGPlogfile' in the current directory) each time the
+			application calls an SRGP function; the message includes
+			echoing of key parameters. IMPORTANT: Calls to some of the
+			input functions are NOT traced; see section 5 for details.
+			See section 7 for more information on execution with
+			tracing.
+		</para>
+		<para>
+			The initial status of tracing is set when the application
+			calls SRGP begin, but it may be changed at any time via a
+			call to SRGP tracing.
+		</para>
+		<programlisting role="C">
+			void SRGP_allowResize (boolean);
+		</programlisting>
+		<para>
+			By default, the screen-canvas window cannot be resized by
+			the user. It is advisable that applications live with this
+			restriction. The rare application that needs to allow
+			resizing can use this routine. It is important to note that
+			various artifacts occur when the user actually does take
+			advantage of this freedom and perform a resize:
+		</para>
+		<orderedlist numeration="arabic">
+			<listitem>
+				<para>
+					The window is cleared to color 0; any information
+					that was on the screen just before the resize is
+					lost.
+				</para>
+			</listitem>
+			<listitem>
+				<para>
+					The clip rectangle attribute is not changed
+					automatically; the application must be responsible
+					for changing it ifnecessary.
+				</para>
+			</listitem>
+		</orderedlist>
+		<para>
+			Obviously, an application that allows resizing must be
+			informed whenever a resize occurs, to cope with the
+			aforementioned problems and other application-specific ones.
+			SRGP provides a callback utility, which allows an
+			application to provide a function to be called whenever a
+			resize has occurred:
+		</para>
+		<programlisting role="C">
+			typedef int (*funcptr)(); void SRGP_registerResizeCallback
+			(funcptr);
+		</programlisting>
+		<para>
+			The application-provided callback function referred to by
+			the function-pointer parameter will be called whenever a
+			resize has occurred. The callback function will receive two
+			integers: the new width and the new height.
+		</para>
+		<programlisting role="C">
+			void SRGP_changeScreenCanvasSize (int newwidth, int
+			newheight);
+		</programlisting>
+		<para>
+			This routine allows the application to modify the size of
+			the screen canvas. As a side-effect, the resize-callback
+			function (if any) is called, just as if the user had
+			requested the resize.
+		</para>
+		<programlisting role="C">
+			void SRGP_enableSynchronous (void);
+		</programlisting>
+		<para>
+			Allows you to enable X's synchronous mode, a useful mode for
+			debugging. The mode is discussed rigorously in section 3,
+			and again in section 7.
+		</para>
+		<programlisting role="C">void SRGP_end (void);</programlisting>
+		<para>
+			The screen-canvas window is deleted, and the logging file is
+			closed.
+		</para>
+	</chapter>
+	<chapter>
+		<title>Einleitung</title>
+		<para>Hier ist das erste Textkapitel des Textes.</para>
+		<para>
+			Um mit DocBook arbeiten zu können, benötigt man als
+			allererstes die DTD, die unter
+			<ulink url="http://www.docbook.org/" />
+			zu finden ist.
+		</para>
+	</chapter>
+	<appendix>
+		<title>Anhang</title>
+		<beginpage />
+	</appendix>
+</book>
